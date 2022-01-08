@@ -1,0 +1,7 @@
+Workdir
+bin
+obj
+build
+publish
+.vscode
+.vs
