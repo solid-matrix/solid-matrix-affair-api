@@ -6,7 +6,7 @@ public static class Helper
     {
         string fileName = Path.GetFileName(path);
         string extName = Path.GetExtension(fileName);
-        switch (extName)
+        switch (extName.ToLower())
         {
             case ".jpg":
             case ".jpeg":
