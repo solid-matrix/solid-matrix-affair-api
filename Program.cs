@@ -1,16 +1,22 @@
-SolidMatrix.Affair.Api.Catalogs.ResourceManager.Init();
+using SolidMatrix.Affair.Api.CatalogsModule;
+using SolidMatrix.Affair.Api.UserModule;
+using SolidMatrix.Affair.Api.WarehouseModule;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddCors(options =>
-{
-    options.AddDefaultPolicy(
-        builder =>
-        {
-            builder.WithOrigins("*");
-        });
-});
+builder.Services
+    .AddCatalogsModule()
+    //.AddUserModule()
+    //.AddWarehouseModule()
+    .AddCors(options => options.AddDefaultPolicy(builder => builder.WithOrigins("*")))
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.IncludeFields = true;
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+    })
+;
 
-builder.Services.AddControllers().AddNewtonsoftJson();
 var app = builder.Build();
 
 app.UseCors();

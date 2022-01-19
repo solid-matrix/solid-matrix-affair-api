@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using SolidMatrix.Affair.Api.Catalogs;
+using SolidMatrix.Affair.Api.CatalogsModule;
+using SolidMatrix.Affair.Api.Core;
 
 namespace SolidMatrix.Affair.Api.Controllers;
 
@@ -7,46 +8,58 @@ namespace SolidMatrix.Affair.Api.Controllers;
 [Route("[controller]")]
 public class CatalogsController : ControllerBase
 {
+    private readonly ILogger<CatalogsController> _logger;
+    private readonly CatalogsService _catalogsService;
+
+    public CatalogsController(ILogger<CatalogsController> logger, CatalogsService catalogsService)
+    {
+        _logger = logger;
+        _catalogsService = catalogsService;
+    }
+
+    [HttpGet]
+    public IActionResult Home()
+    {
+        return new JsonResult(UniformResult.Ok(null));
+    }
+
     [HttpGet("meta")]
     public IActionResult GetMeta()
     {
-        var data = ResourceManager.Meta;
-        UniformMessage msg = new SuccessMessage(data);
-        return new JsonResult(msg);
+        return new JsonResult(UniformResult.Ok(_catalogsService.Metadata));
     }
 
     [HttpGet("init")]
     public IActionResult InitMeta()
     {
-        ResourceManager.InitMeta();
-        UniformMessage msg = new SuccessMessage(null);
-        return new JsonResult(msg);
+        _catalogsService.ResolveWorkdir();
+        return new JsonResult(UniformResult.Ok(null));
     }
-
 
     [HttpGet("catalog/{id}")]
     public IActionResult GetCatalog(string id)
     {
-        var data = ResourceManager.GetCatalog(id);
-        UniformMessage msg = data == null ? new ErrorMessage(null, "not found" + id) : new SuccessMessage(data);
+        var data = _catalogsService.GetCatalogById(id);
+        var msg = data is null ? UniformResult.Error($"Catalog {id} Not Found") : UniformResult.Ok(data);
         return new JsonResult(msg);
     }
 
     [HttpGet("design/{id}")]
     public IActionResult GetDesign(string id)
     {
-        var data = ResourceManager.GetDesign(id);
-        UniformMessage msg = data == null ? new ErrorMessage(null, "not found" + id) : new SuccessMessage(data);
+        var data = _catalogsService.GetDesignById(id);
+        var msg = data is null ? UniformResult.Error($"Design {id} Not Found") : UniformResult.Ok(data);
         return new JsonResult(msg);
     }
 
-    [HttpGet("res/{id}/{style}")]
+    [HttpGet("subimage/{id}/{style}")]
     public IActionResult GetStyledResource(string id, string style)
     {
-        var design = ResourceManager.GetDesign(id);
-        if (design == null) return new NotFoundResult();
-        var path = ResourceManager.GetStyledResourcePath(design, style);
-        if (path == null) return new NotFoundResult();
-        return new PhysicalFileResult(path, "image/jpeg");
+        var path = _catalogsService.GetOrCreateSubImagePath(id, style);
+        if (path is null)
+            return new JsonResult(UniformResult.Error($"SubImage {id}:{style} Not Found"));
+        else
+            return new PhysicalFileResult(path, _catalogsService.Options.SubImageMIME);
+
     }
 }
