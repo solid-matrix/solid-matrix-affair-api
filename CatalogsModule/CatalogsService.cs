@@ -113,7 +113,7 @@ public class CatalogsService
         string fileName = Path.GetFileName(path);
         string extName = Path.GetExtension(fileName);
         HashSet<string> imageExtNames = new() { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".tif", ".tiff", ".webp" };
-        return imageExtNames.Contains(extName);
+        return imageExtNames.Contains(extName.ToLower());
     }
 
     private static string ReadTextOrEmpty(string path)
