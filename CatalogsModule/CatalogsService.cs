@@ -2,6 +2,9 @@
 using SixLabors.ImageSharp.Formats.Jpeg;
 using SixLabors.ImageSharp.Processing;
 
+using SolidMatrix.Affair.Api.Core;
+using System.Threading;
+
 namespace SolidMatrix.Affair.Api.CatalogsModule;
 
 public class CatalogsService
@@ -9,6 +12,8 @@ public class CatalogsService
     private readonly ILogger<CatalogsService> _logger;
 
     private readonly IConfiguration _config;
+
+    private readonly CancellationToken _cancellationToken;
 
     public CatalogsOptions Options { get; set; } = null!;
 
@@ -20,10 +25,42 @@ public class CatalogsService
 
     public Dictionary<string, SubImageStyle> SubImageStyleDict { get; set; } = null!;
 
-    public CatalogsService(ILogger<CatalogsService> logger, IConfiguration config)
+    public CatalogsService(ILogger<CatalogsService> logger, IConfiguration config, IHostApplicationLifetime appLifetime)
     {
         _logger = logger;
         _config = config;
+        _cancellationToken = appLifetime.ApplicationStopping;
+    }
+
+    public void Initialize()
+    {
+
+        // load options
+        Options = _config.GetSection("CatalogsModule").Get<CatalogsOptions>();
+        Options.PublicWorkdirPath = _config.GetValue<string>("CATALOGS_PUBLIC_WORKDIR_PATH") ?? Options.DefaultPublicWorkdirPath;
+        Options.PrivateWorkdirPath = _config.GetValue<string>("CATALOGS_PRIVATE_WORKDIR_PATH") ?? Options.DefaultPrivateWorkdirPath;
+
+        // inform options
+        _logger.LogInformation(
+            $"Catalogs Module Initialize { Environment.NewLine}" +
+            $"Public Workdir Path: {Options.PublicWorkdirPath}{Environment.NewLine}" +
+            $"Private Workdir Path: {Options.PrivateWorkdirPath}{Environment.NewLine}" +
+            $"SubImageStyles:{Environment.NewLine}" +
+            string.Join(Environment.NewLine, Options.SubImageStyles.Select(style => $"Name: {style.Name}; Path: {style.Path}; Size: {style.MaxWidth} * {style.MaxHeight}"))
+            );
+
+        // resolve workdir one time
+        ResolveWorkdir();
+
+        // timed resolve workdir
+        Task.Run(async () =>
+        {
+            while (!_cancellationToken.IsCancellationRequested)
+            {
+                await Task.Delay(TimeSpan.FromSeconds(Options.ResolveWorkdirTimeInterval), _cancellationToken);
+                ResolveWorkdir();
+            }
+        }, _cancellationToken);
     }
 
     public void ResolveWorkdir()
@@ -36,28 +73,12 @@ public class CatalogsService
         SubImageStyleDict = ResolveSubImageStyleDict(Metadata, Options);
     }
 
-
-    public void Initialize()
-    {
-        // load options
-        Options = _config.GetSection("CatalogsModule").Get<CatalogsOptions>();
-        Options.WorkdirPath = _config.GetValue<string>("CATALOGS_WORKDIR_PATH");
-
-        // inform options
-        _logger.LogInformation(
-            $"Catalogs Module Initialize { Environment.NewLine}" +
-            $"Workdir Path: {Options.WorkdirPath}{Environment.NewLine}" +
-            $"SubImageStyles:{Environment.NewLine}" +
-            string.Join(Environment.NewLine, Options.SubImageStyles.Select(style => $"Name: {style.Name}; Path: {style.Path}; Size: {style.MaxWidth} * {style.MaxHeight}"))
-            );
-    }
-
     public string? GetOrCreateSubImagePath(string designId, string styleName)
     {
         var design = GetDesignById(designId);
         var style = GetSubImageStyle(styleName);
         if (design == null || style == null) return null;
-        var path = Path.Combine(Path.GetFullPath(Options.WorkdirPath), style.Path, design.Catalog.Id, design.Id + Options.SubImageFileExtName);
+        var path = Path.Combine(Path.GetFullPath(Options.PrivateWorkdirPath), style.Path, design.Catalog.Id, design.Id + Options.SubImageFileExtName);
 
         if (!File.Exists(path))
         {
@@ -163,17 +184,17 @@ public class CatalogsService
     {
         lock (LoadMetadataLocker)
         {
-            Directory.CreateDirectory(options.WorkdirPath);
+            Directory.CreateDirectory(options.PublicWorkdirPath);
 
             var meta = new Metadata
             {
-                OriginalPath = Path.GetFullPath(options.WorkdirPath),
-                Caption = ReadTextOrEmpty(Path.Combine(options.WorkdirPath, options.CaptionFileName)),
-                Title = ReadTextOrEmpty(Path.Combine(options.WorkdirPath, options.TitleFileName)),
-                SubTitle = ReadTextOrEmpty(Path.Combine(options.WorkdirPath, options.SubTitleFileName))
+                OriginalPath = Path.GetFullPath(options.PublicWorkdirPath),
+                Caption = ReadTextOrEmpty(Path.Combine(options.PublicWorkdirPath, options.CaptionFileName)),
+                Title = ReadTextOrEmpty(Path.Combine(options.PublicWorkdirPath, options.TitleFileName)),
+                SubTitle = ReadTextOrEmpty(Path.Combine(options.PublicWorkdirPath, options.SubTitleFileName))
             };
 
-            foreach (var catalogPath in Directory.GetDirectories(options.WorkdirPath))
+            foreach (var catalogPath in Directory.GetDirectories(options.PublicWorkdirPath))
             {
                 if (Path.GetFileName(catalogPath).StartsWith('_')) continue;
 

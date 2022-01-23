@@ -1,14 +1,19 @@
+using Microsoft.AspNetCore.Mvc;
 using SolidMatrix.Affair.Api.CatalogsModule;
+using SolidMatrix.Affair.Api.Core;
 using SolidMatrix.Affair.Api.UserModule;
 using SolidMatrix.Affair.Api.WarehouseModule;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services
     .AddCatalogsModule()
-    //.AddUserModule()
-    //.AddWarehouseModule()
+    .AddUserModule()
+    .AddWarehouseModule()
     .AddCors(options => options.AddDefaultPolicy(builder => builder.WithOrigins("*")))
-    .AddControllers()
+    .AddControllers(options =>
+    {
+        options.Filters.Add<ExceptionFilter>();
+    })
     .AddJsonOptions(options =>
     {
         options.JsonSerializerOptions.IncludeFields = true;
@@ -22,4 +27,10 @@ var app = builder.Build();
 app.UseCors();
 app.UseAuthorization();
 app.MapControllers();
+
+app.UseCatalogsModule()
+    .UseWarehouseModule()
+    .UseUserModule()
+;
+
 app.Run();

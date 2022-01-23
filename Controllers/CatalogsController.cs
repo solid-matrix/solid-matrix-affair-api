@@ -4,7 +4,6 @@ using SolidMatrix.Affair.Api.Core;
 
 namespace SolidMatrix.Affair.Api.Controllers;
 
-[ApiController]
 [Route("[controller]")]
 public class CatalogsController : ControllerBase
 {

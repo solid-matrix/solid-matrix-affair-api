@@ -12,11 +12,13 @@
     "SolidMatrix.Affair.Api": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "launchBrowser": true,
+      "launchBrowser": false,
       "applicationUrl": "http://localhost:4001",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "CATALOGS_WORKDIR_PATH": "Workdir"
+        "CATALOGS_PUBLIC_WORKDIR_PATH": "workdir/catalogs-public",
+        "CATALOGS_PRIVATE_WORKDIR_PATH": "workdir/catalogs-private",
+        "WAREHOUSE_WORKDIR_PATH": "workdir/warehouse"
       }
     },
     "IIS Express": {
@@ -24,7 +26,9 @@
       "launchBrowser": false,
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "CATALOGS_WORKDIR_PATH": "Workdir"
+        "CATALOGS_PUBLIC_WORKDIR_PATH": "workdir/catalogs-public",
+        "CATALOGS_PRIVATE_WORKDIR_PATH": "workdir/catalogs-private",
+        "WAREHOUSE_WORKDIR_PATH": "workdir/warehouse"
       }
     }
   }
